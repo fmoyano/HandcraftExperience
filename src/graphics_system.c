@@ -1,0 +1,163 @@
+#include "graphics_system.h"
+#include <stdio.h>
+
+extern wchar_t* Shaders_Path;
+
+IDXGISwapChain* swap_chain = NULL;
+ID3D11Device* device = NULL;
+ID3D11DeviceContext* device_context = NULL;
+
+extern ID3D11VertexShader* drawable_vertex_shader;
+extern ID3DBlob* drawable_vertex_shader_blob;
+extern ID3D11VertexShader* drawable_pixel_shader;
+extern ID3DBlob* drawable_pixel_shader_blob;
+
+void graphics_system_init(HWND window_handler)
+{
+	//Finding best adapter
+	IDXGIFactory1* factory = NULL;
+	HRESULT hr = CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&factory);
+	if (FAILED(hr))
+	{
+		printf("Failed to create IDXGIFactory\n");
+		return -1;
+	}
+
+	size_t maxDedicatedMemory = 0;
+	IDXGIAdapter1* chosen_adapter = NULL;
+	IDXGIAdapter1* adapter = NULL;
+	for (int i = 0; factory->lpVtbl->EnumAdapters(factory, i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i)
+	{
+		DXGI_ADAPTER_DESC adapter_desc;
+		memset(&adapter_desc, 0, sizeof(DXGI_ADAPTER_DESC));
+		adapter->lpVtbl->GetDesc(adapter, &adapter_desc);
+		if (maxDedicatedMemory < adapter_desc.DedicatedVideoMemory)
+		{
+			maxDedicatedMemory = adapter_desc.DedicatedVideoMemory;
+			chosen_adapter = adapter;
+		}
+	}
+
+	DXGI_SWAP_CHAIN_DESC swap_chain_desc;
+	memset(&swap_chain_desc, 0, sizeof(swap_chain_desc));
+
+	swap_chain_desc.BufferCount = 1;
+	swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swap_chain_desc.OutputWindow = window_handler;
+	swap_chain_desc.SampleDesc.Count = 4;
+	swap_chain_desc.Windowed = TRUE;
+
+	D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1 };
+
+	unsigned creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+#if defined(DEBUG) || defined(_DEBUG)
+	creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
+	 hr = D3D11CreateDeviceAndSwapChain(chosen_adapter,
+		D3D_DRIVER_TYPE_UNKNOWN, NULL, creationFlags, NULL, NULL, D3D11_SDK_VERSION, &swap_chain_desc,
+		&swap_chain, &device, featureLevels, &device_context);
+
+	 //Creating vertex and pixel shader to be shared among all drawables
+	 graphics_system_create_vshader(L"data/shaders/VertexShader.hlsl",
+		 &drawable_vertex_shader_blob, &drawable_vertex_shader);
+
+	 graphics_system_create_pshader(L"data/shaders/PixelShader.hlsl",
+		 &drawable_pixel_shader_blob, &drawable_pixel_shader);
+}
+
+HRESULT compile_shader(const wchar_t* file_name, const char* profile, ID3DBlob** shaderBlob)
+{
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if defined(DEBUG) || defined(_DEBUG)
+	flags |= D3DCOMPILE_DEBUG;
+#endif
+
+	ID3DBlob* errorBlob = NULL;
+	HRESULT hrShader = D3DCompileFromFile(file_name, NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		"main", profile, flags, 0, shaderBlob, &errorBlob);
+
+	if (FAILED(hrShader))
+	{
+		if (errorBlob)
+		{
+			OutputDebugStringA((char*)errorBlob->lpVtbl->GetBufferPointer(errorBlob));
+			errorBlob->lpVtbl->Release(errorBlob);
+		}
+
+		if (*shaderBlob)
+		{
+			(*shaderBlob)->lpVtbl->Release(*shaderBlob);
+		}
+	}
+}
+
+int graphics_system_create_vshader(const wchar_t* path_to_source, ID3DBlob** vertex_shader_blob,
+	ID3D11VertexShader** vertex_shader)
+{
+	HRESULT compileResult = compile_shader(path_to_source, "vs_4_1", vertex_shader_blob);
+	if (FAILED(compileResult))
+	{
+		return -1;
+	}
+
+	HRESULT shader_creation = device->lpVtbl->CreateVertexShader(device, (*vertex_shader_blob)->lpVtbl->GetBufferPointer(*vertex_shader_blob),
+		(*vertex_shader_blob)->lpVtbl->GetBufferSize(*vertex_shader_blob), NULL, vertex_shader);
+	if (FAILED(shader_creation))
+	{
+		return -1;
+	}
+
+	return 0;
+}
+
+int graphics_system_create_pshader(const wchar_t* path_to_source, ID3DBlob** pixel_shader_blob,
+	ID3D11PixelShader** pixel_shader)
+{
+	HRESULT compileResult = compile_shader(path_to_source, "ps_4_1", pixel_shader_blob);
+	if (FAILED(compileResult))
+	{
+		return -1;
+	}
+
+	HRESULT shader_creation = device->lpVtbl->CreatePixelShader(device, (*pixel_shader_blob)->lpVtbl->GetBufferPointer(*pixel_shader_blob),
+		(*pixel_shader_blob)->lpVtbl->GetBufferSize(*pixel_shader_blob), NULL, pixel_shader);
+	if (FAILED(shader_creation))
+	{
+		return -1;
+	}
+	
+	return 0;
+}
+
+int graphics_system_create_buffer(void* data, Buffer_type buffer_type, size_t buffer_byte_width,
+	ID3D11Buffer** the_buffer)
+{
+	D3D11_BUFFER_DESC buffer_desc;
+	memset(&buffer_desc, 0, sizeof(D3D11_BUFFER_DESC));
+	buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+	buffer_desc.ByteWidth = buffer_byte_width;
+	buffer_desc.BindFlags = buffer_type == Vertex_Buffer ? D3D11_BIND_VERTEX_BUFFER :
+		D3D11_BIND_INDEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA buffer_data;
+	memset(&buffer_data, 0, sizeof(D3D11_SUBRESOURCE_DATA));
+	buffer_data.pSysMem = data;
+	buffer_data.SysMemPitch = 0;
+	buffer_data.SysMemSlicePitch = 0;
+
+	HRESULT hr = device->lpVtbl->CreateBuffer(device, &buffer_desc, &buffer_data, the_buffer);
+	if (FAILED(hr))
+	{
+		return -1;
+	}
+
+	return 0;
+}
+
+
+void graphics_system_close(void)
+{
+
+}
