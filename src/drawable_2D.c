@@ -3,7 +3,7 @@
 #include "drawable_2D.h"
 #include "graphics_system.h"
 #include <string.h>
-#include "../../cglm/include/cglm/cglm.h"
+#include <cglm/cglm.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -27,8 +27,17 @@ typedef struct
 	mat4 projection_matrix;
 } VS_Matrices;
 
+typedef struct
+{
+	vec3 world_position;
+	vec3 scale;
+	float degrees_around_z;
+} Transform;
+
 typedef struct Drawable2D
 {
+	Transform transform;
+
 	int *indices;
 	float* vertices;
 	
@@ -87,12 +96,21 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 	vertices[2].position[1] = start_y_position - image_height_clip_space;
 	vertices[3].position[1] = start_y_position - image_height_clip_space;
 
-	Drawable2D drawable;// = malloc(sizeof(Drawable2D));
+	Drawable2D drawable;
 	memset(&drawable, 0, sizeof(Drawable2D));
 	drawable.vertices = vertices;
 	drawable.indices = indices;
 	drawable.vertex_buffer_stride = sizeof(Vertex_Data);
 	drawable.vertex_buffer_offset = 0;
+
+	Transform transform = { .degrees_around_z = 45.0f };
+	glm_vec3_zero(transform.world_position);
+	float position_vector[] = {0.5f, 0.5f, 0.0f};
+	glm_vec3(position_vector, transform.world_position);
+	glm_vec3_zero(transform.scale);
+	float scale_vector[] = {1.0f, 1.0f, 0.0f};
+	glm_vec3(scale_vector, transform.scale);
+	drawable.transform = transform;
 
 	graphics_system_create_buffer(vertices, Vertex_Buffer, sizeof(vertices),
 		&drawable.vertex_buffer);
@@ -142,7 +160,7 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 
 	D3D11_BUFFER_DESC cb_desc;
 	memset(&cb_desc, 0, sizeof(D3D11_BUFFER_DESC));
-	cb_desc.ByteWidth = 16;//sizeof(PS_Extra_Rendering_Info);
+	cb_desc.ByteWidth = 16;//sizeof(PS_Extra_Rendering_Info) see docs, seems 16 is the minimum;
 	cb_desc.Usage = D3D11_USAGE_DYNAMIC;
 	cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	cb_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -166,14 +184,10 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 		glm_mat4_identity(matrices_cbuffer.view_matrix);
 		glm_mat4_identity(matrices_cbuffer.projection_matrix);
 
-		float translation_vector[] = { 0.5f, 0.5f, 0.0f };
-		glm_translate(matrices_cbuffer.world_matrix, translation_vector);
-		
-		float scale_vector[] = { 1.0f, 1.0f, 0.0f };
-		glm_scale(matrices_cbuffer.world_matrix, scale_vector);
-
+		glm_translate(matrices_cbuffer.world_matrix, drawable.transform.world_position);
+		glm_scale(matrices_cbuffer.world_matrix, drawable.transform.scale);
 		float rotation_axis[] = { 0.0f, 0.0f, 1.0f };
-		glm_rotate(matrices_cbuffer.world_matrix, 0.0f, rotation_axis);
+		glm_rotate(matrices_cbuffer.world_matrix, drawable.transform.degrees_around_z, rotation_axis);
 
 		D3D11_BUFFER_DESC cb_matrix_desc;
 		memset(&cb_matrix_desc, 0, sizeof(D3D11_BUFFER_DESC));

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
-#include "../../cglm/include/cglm/cglm.h"
+#include <cglm/cglm.h>
 #include <string.h>
 #include "drawable_2D.h"
 #include "graphics_system.h"
