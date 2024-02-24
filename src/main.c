@@ -194,6 +194,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 		device_context->lpVtbl->OMSetBlendState(device_context, blend_state, NULL, 0xffffffff);
 		
 		//drawable2D_draw(square);
+		drawable2D_set_position(velociraptor, GLM_VEC3_ZERO);
 		drawable2D_draw(velociraptor);
 
 		//drawable2D_draw(t_rex);

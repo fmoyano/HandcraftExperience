@@ -3,7 +3,6 @@
 #include "drawable_2D.h"
 #include "graphics_system.h"
 #include <string.h>
-#include <cglm/cglm.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -103,9 +102,9 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 	drawable.vertex_buffer_stride = sizeof(Vertex_Data);
 	drawable.vertex_buffer_offset = 0;
 
-	Transform transform = { .degrees_around_z = 45.0f };
+	Transform transform = { .degrees_around_z = 0.0f };
 	glm_vec3_zero(transform.world_position);
-	float position_vector[] = {0.5f, 0.5f, 0.0f};
+	float position_vector[] = {0.0f, 0.0f, 0.0f};
 	glm_vec3(position_vector, transform.world_position);
 	glm_vec3_zero(transform.scale);
 	float scale_vector[] = {1.0f, 1.0f, 0.0f};
@@ -335,6 +334,43 @@ void drawable2D_draw_all()
 		drawable2D_draw(&drawables[i]);
 	}
 }
+
+extern void drawable2D_set_position(Drawable2D* drawable, vec3 position)
+{
+	VS_Matrices matrices_cbuffer;
+	glm_mat4_identity(matrices_cbuffer.world_matrix);
+	glm_mat4_identity(matrices_cbuffer.view_matrix);
+	glm_mat4_identity(matrices_cbuffer.projection_matrix);
+
+	float addition_v[] = {0.001f, 0.0f, 0.0f};
+	glm_vec3_add(drawable->transform.world_position, addition_v, drawable->transform.world_position);
+
+	//glm_vec3(position, drawable->transform.world_position);
+	glm_translate(matrices_cbuffer.world_matrix, drawable->transform.world_position);
+
+	D3D11_MAPPED_SUBRESOURCE mapped_mvp_cbuffer;
+	//memset(&mapped_mvp_cbuffer, 0, sizeof(D3D11_MAPPED_SUBRESOURCE));
+	HRESULT hr = device_context->lpVtbl->Map(device_context, drawable->mvp_cbuffer, 0,
+			D3D11_MAP_WRITE_DISCARD, 0, &mapped_mvp_cbuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	memcpy(mapped_mvp_cbuffer.pData, &matrices_cbuffer, sizeof(VS_Matrices));
+	//mapped_mvp_cbuffer.pData = matrices_cbuffer;
+
+	/*for (int i = 0; i < 4; ++i)
+	{
+		*((float*)mapped_vertices.pData + i * 7 + 3) = r;
+		*((float*)mapped_vertices.pData + i * 7 + 4) = g;
+		*((float*)mapped_vertices.pData + i * 7 + 5) = b;
+		*((float*)mapped_vertices.pData + i * 7 + 6) = a;
+	}*/
+
+	device_context->lpVtbl->Unmap(device_context, drawable->mvp_cbuffer, 0);
+}
+
 
 void drawable2D_destroy(Drawable2D* drawable)
 {
