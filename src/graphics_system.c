@@ -1,5 +1,6 @@
 #include "graphics_system.h"
 #include <stdio.h>
+#include "fileapi.h"
 
 extern wchar_t* Shaders_Path;
 
@@ -8,9 +9,11 @@ ID3D11Device* device = NULL;
 ID3D11DeviceContext* device_context = NULL;
 
 extern ID3D11VertexShader* drawable_vertex_shader;
-extern ID3DBlob* drawable_vertex_shader_blob;
+//extern ID3DBlob* drawable_vertex_shader_blob;
+extern void* vertex_shader_data;
+extern int vertex_shader_size;
+
 extern ID3D11VertexShader* drawable_pixel_shader;
-extern ID3DBlob* drawable_pixel_shader_blob;
 
 void graphics_system_init(HWND window_handler)
 {
@@ -60,11 +63,9 @@ void graphics_system_init(HWND window_handler)
 		&swap_chain, &device, featureLevels, &device_context);
 
 	 //Creating vertex and pixel shader to be shared among all drawables
-	 graphics_system_create_vshader(L"data/shaders/VertexShader.hlsl",
-		 &drawable_vertex_shader_blob, &drawable_vertex_shader);
+	 graphics_system_create_vshader(L"data/shaders/VertexShader.hlsl", &drawable_vertex_shader);
 
-	 graphics_system_create_pshader(L"data/shaders/PixelShader.hlsl",
-		 &drawable_pixel_shader_blob, &drawable_pixel_shader);
+	 graphics_system_create_pshader(L"data/shaders/PixelShader.hlsl", &drawable_pixel_shader);
 }
 
 HRESULT compile_shader(const wchar_t* file_name, const char* profile, ID3DBlob** shaderBlob)
@@ -93,17 +94,30 @@ HRESULT compile_shader(const wchar_t* file_name, const char* profile, ID3DBlob**
 	}
 }
 
-int graphics_system_create_vshader(const wchar_t* path_to_source, ID3DBlob** vertex_shader_blob,
-	ID3D11VertexShader** vertex_shader)
+int graphics_system_create_vshader(const wchar_t* path_to_source, ID3D11VertexShader** vertex_shader)
 {
-	HRESULT compileResult = compile_shader(path_to_source, "vs_4_1", vertex_shader_blob);
-	if (FAILED(compileResult))
+	//TODO: encapsulate this into header or util file
+	//Correct treatment of errors; correct reading (looping until bytes_read == bytes_required)
+	HANDLE file_handle = CreateFileA("data/shaders/vs.cso", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (file_handle == NULL)
 	{
-		return -1;
+		return;
 	}
 
-	HRESULT shader_creation = device->lpVtbl->CreateVertexShader(device, (*vertex_shader_blob)->lpVtbl->GetBufferPointer(*vertex_shader_blob),
-		(*vertex_shader_blob)->lpVtbl->GetBufferSize(*vertex_shader_blob), NULL, vertex_shader);
+	vertex_shader_size = GetFileSize(file_handle, NULL);
+	
+	int bytes_read = 0;
+	vertex_shader_data = VirtualAlloc(NULL, vertex_shader_size, MEM_COMMIT, PAGE_READWRITE);
+	int read_result = ReadFile(file_handle, vertex_shader_data, vertex_shader_size, &bytes_read, NULL);
+	if (read_result == 0)
+	{
+		return;		
+	}
+
+	CloseHandle(file_handle);
+
+	HRESULT shader_creation = device->lpVtbl->CreateVertexShader(device, vertex_shader_data,
+		vertex_shader_size, NULL, vertex_shader);
 	if (FAILED(shader_creation))
 	{
 		return -1;
@@ -112,17 +126,30 @@ int graphics_system_create_vshader(const wchar_t* path_to_source, ID3DBlob** ver
 	return 0;
 }
 
-int graphics_system_create_pshader(const wchar_t* path_to_source, ID3DBlob** pixel_shader_blob,
-	ID3D11PixelShader** pixel_shader)
+int graphics_system_create_pshader(const wchar_t* path_to_source, ID3D11PixelShader** pixel_shader)
 {
-	HRESULT compileResult = compile_shader(path_to_source, "ps_4_1", pixel_shader_blob);
-	if (FAILED(compileResult))
+	//TODO: encapsulate this into header or util file
+	//Correct treatment of errors; correct reading (looping until bytes_read == bytes_required)
+	HANDLE file_handle = CreateFileA("data/shaders/ps.cso", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (file_handle == NULL)
 	{
-		return -1;
+		return;
 	}
 
-	HRESULT shader_creation = device->lpVtbl->CreatePixelShader(device, (*pixel_shader_blob)->lpVtbl->GetBufferPointer(*pixel_shader_blob),
-		(*pixel_shader_blob)->lpVtbl->GetBufferSize(*pixel_shader_blob), NULL, pixel_shader);
+	int pixel_shader_size = GetFileSize(file_handle, NULL);
+	
+	int bytes_read = 0;
+	void* pixel_shader_data = VirtualAlloc(NULL, pixel_shader_size, MEM_COMMIT, PAGE_READWRITE);
+	int read_result = ReadFile(file_handle, pixel_shader_data, pixel_shader_size, &bytes_read, NULL);
+	if (read_result == 0)
+	{
+		return;		
+	}
+
+	CloseHandle(file_handle);
+
+	HRESULT shader_creation = device->lpVtbl->CreatePixelShader(device, pixel_shader_data,
+		pixel_shader_size, NULL, pixel_shader);
 	if (FAILED(shader_creation))
 	{
 		return -1;

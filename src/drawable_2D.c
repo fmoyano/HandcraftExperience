@@ -72,9 +72,11 @@ static unsigned indices[] =
 };
 
 ID3D11VertexShader* drawable_vertex_shader;
-ID3DBlob* drawable_vertex_shader_blob;
+//ID3DBlob* drawable_vertex_shader_blob;
+void* vertex_shader_data;
+int vertex_shader_size;
+
 ID3D11VertexShader* drawable_pixel_shader;
-ID3DBlob* drawable_pixel_shader_blob;
 
 Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 {
@@ -125,8 +127,8 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 	};
 
 	HRESULT hr = device->lpVtbl->CreateInputLayout(device, layoutDesc, 3,
-		drawable_vertex_shader_blob->lpVtbl->GetBufferPointer(drawable_vertex_shader_blob),
-		drawable_vertex_shader_blob->lpVtbl->GetBufferSize(drawable_vertex_shader_blob), &drawable.inputLayout);
+		vertex_shader_data,
+		vertex_shader_size, &drawable.inputLayout);
 
 	//Create a Direct3D texture from the image data to feed the pixel shader sampler
 	D3D11_TEXTURE2D_DESC texture_desc;
@@ -267,8 +269,8 @@ Drawable2D* _drawable2D_create_square(Color shape_color)
 	};
 
 	HRESULT hr = device->lpVtbl->CreateInputLayout(device, layoutDesc, 3,
-		drawable_vertex_shader_blob->lpVtbl->GetBufferPointer(drawable_vertex_shader_blob),
-		drawable_vertex_shader_blob->lpVtbl->GetBufferSize(drawable_vertex_shader_blob), &drawable.inputLayout);
+		vertex_shader_data,
+		vertex_shader_size, &drawable.inputLayout);
 
 	PS_Extra_Rendering_Info ps_cbuffer;
 	ps_cbuffer.use_texture = 0;

@@ -21,5 +21,6 @@ float4 main(PS_INPUT input) : SV_TARGET
     {
         final_color *= tex.Sample(ss, input.texcoord);
     }
+
     return final_color;
 }
