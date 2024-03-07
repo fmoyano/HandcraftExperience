@@ -76,7 +76,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 
 	RegisterClass(&wc);
 
-	HWND hwnd = CreateWindowEx(0, CLASS_NAME, L"Those Big Things (D3D11)", WS_OVERLAPPEDWINDOW,
+	HWND hwnd = CreateWindowEx(0, CLASS_NAME, "Those Big Things (D3D11)", WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
 	if (hwnd == NULL) return -1;
 
