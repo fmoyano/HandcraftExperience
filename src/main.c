@@ -2,7 +2,6 @@
 #include <windows.h>
 #include <stdbool.h>
 #include <d3d11.h>
-#include <d3dcompiler.h>
 #include <cglm/cglm.h>
 #include <string.h>
 #include "drawable_2D.h"

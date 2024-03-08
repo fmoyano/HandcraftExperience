@@ -68,32 +68,6 @@ void graphics_system_init(HWND window_handler)
 	 graphics_system_create_pshader(L"data/shaders/PixelShader.hlsl", &drawable_pixel_shader);
 }
 
-HRESULT compile_shader(const wchar_t* file_name, const char* profile, ID3DBlob** shaderBlob)
-{
-	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-	flags |= D3DCOMPILE_DEBUG;
-#endif
-
-	ID3DBlob* errorBlob = NULL;
-	HRESULT hrShader = D3DCompileFromFile(file_name, NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		"main", profile, flags, 0, shaderBlob, &errorBlob);
-
-	if (FAILED(hrShader))
-	{
-		if (errorBlob)
-		{
-			OutputDebugStringA((char*)errorBlob->lpVtbl->GetBufferPointer(errorBlob));
-			errorBlob->lpVtbl->Release(errorBlob);
-		}
-
-		if (*shaderBlob)
-		{
-			(*shaderBlob)->lpVtbl->Release(*shaderBlob);
-		}
-	}
-}
-
 int graphics_system_create_vshader(const wchar_t* path_to_source, ID3D11VertexShader** vertex_shader)
 {
 	//TODO: encapsulate this into header or util file
