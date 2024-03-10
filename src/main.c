@@ -90,8 +90,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 	graphics_system_init(hwnd);
 	
 	Drawable2D* velociraptor = drawable2D_create_from_texture("data/textures/velociraptor.png");
-	//Drawable2D* t_rex = drawable2D_create_from_texture("data/textures/t-rex.png");
+	Drawable2D* t_rex = drawable2D_create_from_texture("data/textures/t-rex.png");
 	//Drawable2D* square = drawable2D_create_from_shape(Square, Red);
+	float velocity[3] = { 0.1f, 0.0f, 0.0f };
+	drawable2D_set_velocity(velociraptor, velocity);
+
+	velocity[0] = -0.1f;
+	drawable2D_set_velocity(t_rex, velocity);
 
 	device_context->lpVtbl->IASetPrimitiveTopology(device_context, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -179,25 +184,24 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
 	{
 		delta_time = (double)(ending_time - starting_time) / (double)OS_frequency;
-		printf("%fs elapsed seconds\n", delta_time);
 
 		starting_time = get_OS_timer();
 
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 
-		//update_simulation((float)elapsed_milliseconds.QuadPart / 1000.0f);
-
 		device_context->lpVtbl->
 			ClearRenderTargetView(device_context, render_target_view, (const float[]) { 3.f/255.f, 167.f/255.f, 187.f/255.f, 1.0f });
 		device_context->lpVtbl->RSSetState(device_context, rasterizer_state);
 		device_context->lpVtbl->OMSetBlendState(device_context, blend_state, NULL, 0xffffffff);
 		
+		drawable2D_update(velociraptor, delta_time);
+		drawable2D_update(t_rex, delta_time);
 		//drawable2D_draw(square);
-		drawable2D_set_position(velociraptor, GLM_VEC3_ZERO);
+		//drawable2D_set_position(velociraptor, GLM_VEC3_ZERO);
 		drawable2D_draw(velociraptor);
 
-		//drawable2D_draw(t_rex);
+		drawable2D_draw(t_rex);
 		//drawable2D_draw_all();
 
 		swap_chain->lpVtbl->Present(swap_chain, 0, 0);

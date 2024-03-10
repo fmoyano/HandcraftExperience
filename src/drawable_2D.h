@@ -18,6 +18,8 @@ extern Drawable2D* drawable2D_create_from_texture(const char* texture_path);
 extern Drawable2D* drawable2D_create_from_shape(Shape2D shape, Color color);
 extern void drawable2D_draw(Drawable2D* drawable);
 extern void drawable2D_draw_all();
-extern void drawable2D_set_position(Drawable2D* drawable, vec3 position);
+
+extern void drawable2D_set_velocity(Drawable2D* drawable, vec3 velocity);
+extern void drawable2D_update(Drawable2D* drawable, double delta_time);
 
 #endif

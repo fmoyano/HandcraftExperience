@@ -33,9 +33,15 @@ typedef struct
 	float degrees_around_z;
 } Transform;
 
+typedef struct
+{
+	vec3 velocity;
+} Movement_Data;
+
 typedef struct Drawable2D
 {
 	Transform transform;
+	Movement_Data mov_data;
 
 	int *indices;
 	float* vertices;
@@ -112,6 +118,7 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 	float scale_vector[] = {1.0f, 1.0f, 0.0f};
 	glm_vec3(scale_vector, transform.scale);
 	drawable.transform = transform;
+	//rawable.mov_data
 
 	graphics_system_create_buffer(vertices, Vertex_Buffer, sizeof(vertices),
 		&drawable.vertex_buffer);
@@ -310,8 +317,32 @@ Drawable2D* drawable2D_create_from_shape(Shape2D shape, Color color)
 	return drawable;
 }
 
+void drawable2D_update_cbuffer(Drawable2D* drawable)
+{
+	VS_Matrices matrices_cbuffer;
+	glm_mat4_identity(matrices_cbuffer.world_matrix);
+	glm_mat4_identity(matrices_cbuffer.view_matrix);
+	glm_mat4_identity(matrices_cbuffer.projection_matrix);
+
+	glm_translate(matrices_cbuffer.world_matrix, drawable->transform.world_position);
+
+	D3D11_MAPPED_SUBRESOURCE mapped_mvp_cbuffer;
+	HRESULT hr = device_context->lpVtbl->Map(device_context, drawable->mvp_cbuffer, 0,
+		D3D11_MAP_WRITE_DISCARD, 0, &mapped_mvp_cbuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	memcpy(mapped_mvp_cbuffer.pData, &matrices_cbuffer, sizeof(VS_Matrices));
+
+	device_context->lpVtbl->Unmap(device_context, drawable->mvp_cbuffer, 0);
+}
+
 void drawable2D_draw(Drawable2D* drawable)
 {
+	drawable2D_update_cbuffer(drawable);
+
 	device_context->lpVtbl->IASetInputLayout(device_context, drawable->inputLayout);
 
 	device_context->lpVtbl->VSSetShader(device_context, drawable_vertex_shader, 0, 0);
@@ -337,42 +368,15 @@ void drawable2D_draw_all()
 	}
 }
 
-extern void drawable2D_set_position(Drawable2D* drawable, vec3 position)
+void drawable2D_set_velocity(Drawable2D* drawable, vec3 velocity)
 {
-	VS_Matrices matrices_cbuffer;
-	glm_mat4_identity(matrices_cbuffer.world_matrix);
-	glm_mat4_identity(matrices_cbuffer.view_matrix);
-	glm_mat4_identity(matrices_cbuffer.projection_matrix);
-
-	float addition_v[] = {0.001f, 0.0f, 0.0f};
-	glm_vec3_add(drawable->transform.world_position, addition_v, drawable->transform.world_position);
-
-	//glm_vec3(position, drawable->transform.world_position);
-	glm_translate(matrices_cbuffer.world_matrix, drawable->transform.world_position);
-
-	D3D11_MAPPED_SUBRESOURCE mapped_mvp_cbuffer;
-	//memset(&mapped_mvp_cbuffer, 0, sizeof(D3D11_MAPPED_SUBRESOURCE));
-	HRESULT hr = device_context->lpVtbl->Map(device_context, drawable->mvp_cbuffer, 0,
-			D3D11_MAP_WRITE_DISCARD, 0, &mapped_mvp_cbuffer);
-	if (FAILED(hr))
-	{
-		return;
-	}
-
-	memcpy(mapped_mvp_cbuffer.pData, &matrices_cbuffer, sizeof(VS_Matrices));
-	//mapped_mvp_cbuffer.pData = matrices_cbuffer;
-
-	/*for (int i = 0; i < 4; ++i)
-	{
-		*((float*)mapped_vertices.pData + i * 7 + 3) = r;
-		*((float*)mapped_vertices.pData + i * 7 + 4) = g;
-		*((float*)mapped_vertices.pData + i * 7 + 5) = b;
-		*((float*)mapped_vertices.pData + i * 7 + 6) = a;
-	}*/
-
-	device_context->lpVtbl->Unmap(device_context, drawable->mvp_cbuffer, 0);
+	glm_vec3(velocity, drawable->mov_data.velocity);
 }
 
+void drawable2D_update(Drawable2D* drawable, double delta_time)
+{
+	glm_vec3_muladds(drawable->mov_data.velocity, delta_time, drawable->transform.world_position);
+}
 
 void drawable2D_destroy(Drawable2D* drawable)
 {
