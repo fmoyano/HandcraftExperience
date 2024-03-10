@@ -1,8 +1,8 @@
 clear
 
 Write-Output "Compiling shaders..."
-fxc /Ges /Zi /T vs_4_1 .\data\shaders\VertexShader.hlsl /Fo .\data\shaders\vs.cso
-fxc /Ges /Zi /T ps_4_1 .\data\shaders\PixelShader.hlsl /Fo .\data\shaders\ps.cso
+fxc /Ges /Zi /T vs_4_1 .\data\shaders\VertexShader.hlsl /Ni /No /Fc .\data\shaders\vs_disassembly /Fo .\data\shaders\vs.cso
+fxc /Ges /Zi /T ps_4_1 .\data\shaders\PixelShader.hlsl /Ni /No /Fc .\data\shaders\ps_disassembly /Fo .\data\shaders\ps.cso
 
 Write-Output "Building app..."
 
