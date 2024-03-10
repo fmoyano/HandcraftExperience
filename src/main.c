@@ -6,6 +6,7 @@
 #include <string.h>
 #include "drawable_2D.h"
 #include "graphics_system.h"
+#include "timing.h"
 
 extern IDXGISwapChain* swap_chain;
 extern ID3D11Device* device;
@@ -34,10 +35,9 @@ HRESULT compile_shader(const wchar_t* file_name, const char* profile, ID3DBlob**
 void change_color(float r, float g, float b, float a);
 void update_simulation(float dt);
 
-
-LARGE_INTEGER frequency;
-LARGE_INTEGER starting_time, ending_time;
-LARGE_INTEGER elapsed_milliseconds;
+long long OS_frequency;
+long long starting_time, ending_time;
+double delta_time;
 
 bool right_arrow;
 
@@ -50,7 +50,9 @@ wchar_t* get_path(const wchar_t* file_name, const wchar_t* folder_path)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine, int nCmdSHow)
 {
-	unsigned long initial_value = __rdtsc();
+	long long initial_value = __rdtsc();
+
+	OS_frequency = get_OS_timer_frequency();
 
 	//From stack overflow: fi is not needed, we only use it because it's a required parameter
 	//The important code is that stdout is redirected to CONOUT$, which is the console output stream
@@ -61,9 +63,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 		freopen_s(&fi, "CONOUT$", "w", stdout);
 	}
 	console_enabled = AttachConsole(ATTACH_PARENT_PROCESS);
-
-	QueryPerformanceFrequency(&frequency);
-	QueryPerformanceCounter(&starting_time);
+	
+	printf("Frequency = %llu\n", get_CPU_Frequency());
 
 	const wchar_t CLASS_NAME[] = L"Sample Window Class";
 
@@ -171,16 +172,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 	viewport.MaxDepth = 1.0f;
 	device_context->lpVtbl->RSSetViewports(device_context, 1, &viewport);
 
-	QueryPerformanceCounter(&ending_time);
+	starting_time = ending_time = get_OS_timer();
+	delta_time = 0;
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
 	{
-		elapsed_milliseconds.QuadPart = ending_time.QuadPart - starting_time.QuadPart;
-		elapsed_milliseconds.QuadPart *= 1000;
-		elapsed_milliseconds.QuadPart /= frequency.QuadPart;
+		delta_time = (double)(ending_time - starting_time) / (double)OS_frequency;
+		printf("%fs elapsed seconds\n", delta_time);
 
-		QueryPerformanceCounter(&starting_time);
+		starting_time = get_OS_timer();
 
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
@@ -197,11 +198,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 		drawable2D_draw(velociraptor);
 
 		//drawable2D_draw(t_rex);
-		//	drawable2D_draw_all();
+		//drawable2D_draw_all();
 
 		swap_chain->lpVtbl->Present(swap_chain, 0, 0);
 
-		QueryPerformanceCounter(&ending_time);
+		ending_time = get_OS_timer();
 	}
 
 	// TODO: remove original velociraptor image
@@ -215,6 +216,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 
 	unsigned long final_value = __rdtsc();
 
+	if (final_value > initial_value)
+	{
+		printf("hola");
+	}
 	unsigned long diff = final_value - initial_value;
 
 	return 0;
