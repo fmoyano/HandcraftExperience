@@ -7,6 +7,7 @@
 #include "drawable_2D.h"
 #include "graphics_system.h"
 #include "timing.h"
+#include "input.h"
 
 extern IDXGISwapChain* swap_chain;
 extern ID3D11Device* device;
@@ -35,9 +36,12 @@ HRESULT compile_shader(const wchar_t* file_name, const char* profile, ID3DBlob**
 void change_color(float r, float g, float b, float a);
 void update_simulation(float dt);
 
+//Timing
 long long OS_frequency;
 long long starting_time, ending_time;
 double delta_time;
+
+Input_Data input;
 
 bool right_arrow;
 
@@ -50,8 +54,6 @@ wchar_t* get_path(const wchar_t* file_name, const wchar_t* folder_path)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine, int nCmdSHow)
 {
-	long long initial_value = __rdtsc();
-
 	OS_frequency = get_OS_timer_frequency();
 
 	//From stack overflow: fi is not needed, we only use it because it's a required parameter
@@ -64,8 +66,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 	}
 	console_enabled = AttachConsole(ATTACH_PARENT_PROCESS);
 	
-	printf("Frequency = %llu\n", get_CPU_Frequency());
-
 	const wchar_t CLASS_NAME[] = L"Sample Window Class";
 
 	WNDCLASS wc;
@@ -92,12 +92,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 	Drawable2D* velociraptor = drawable2D_create_from_texture("data/textures/velociraptor.png");
 	Drawable2D* t_rex = drawable2D_create_from_texture("data/textures/t-rex.png");
 	//Drawable2D* square = drawable2D_create_from_shape(Square, Red);
-	float velocity[3] = { 0.1f, 0.0f, 0.0f };
-	drawable2D_set_velocity(velociraptor, velocity);
-
-	velocity[0] = -0.1f;
-	drawable2D_set_velocity(t_rex, velocity);
-
+	
 	device_context->lpVtbl->IASetPrimitiveTopology(device_context, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Next initialize the back buffer of the swap chain and associate it to a 
@@ -197,13 +192,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 		
 		drawable2D_update(velociraptor, delta_time);
 		drawable2D_update(t_rex, delta_time);
-		//drawable2D_draw(square);
-		//drawable2D_set_position(velociraptor, GLM_VEC3_ZERO);
+		
 		drawable2D_draw(velociraptor);
-
 		drawable2D_draw(t_rex);
-		//drawable2D_draw_all();
-
+		
 		swap_chain->lpVtbl->Present(swap_chain, 0, 0);
 
 		ending_time = get_OS_timer();
@@ -217,14 +209,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 	{
 		FreeConsole();
 	}
-
-	unsigned long final_value = __rdtsc();
-
-	if (final_value > initial_value)
-	{
-		printf("hola");
-	}
-	unsigned long diff = final_value - initial_value;
 
 	return 0;
 }
@@ -258,62 +242,62 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 
 	case WM_KEYDOWN:
-		if (wParam == VK_SPACE)
-		{
-			rasterizer_state = (rasterizer_state == rasterizer_state_solid) ?
-				rasterizer_state_wireframe :
-				rasterizer_state_solid;
-		}
-		else if (wParam == VK_SHIFT)
-		{
-			//change_color(1.0f, 1.0f, 1.0f, 1.0f);
-		}
-		else if (wParam == VK_CONTROL)
-		{
-			//change_color(0.0f, 1.0f, 0.0f, 1.0f);
-		}
+		input.event = Key_Down;
+		input.key = Other;
+
+		if (wParam == 0x41)
+			input.key = Key_A;
+		else if (wParam == 0x44)
+			input.key = Key_D;
+		else if (wParam == 0x53)
+			input.key = Key_S;
+		else if (wParam == 0x57)
+			input.key = Key_W;
 		else if (wParam == VK_RIGHT)
 		{
-			right_arrow = true;
+			input.key = Key_RARROW;
+			if (!(lParam >> 30) && 0x01)
+				input.event = Key_Just_Down;
 		}
+		else if (wParam == VK_LEFT)
+		{
+			input.key = Key_LARROW;
+			if (!(lParam >> 30) && 0x01)
+				input.event = Key_Just_Down;
+		}
+		else if (wParam == VK_UP)
+			input.key = Key_UARROW;
+		else if (wParam == VK_DOWN)
+			input.key = Key_DARROW;
 		else if (wParam == VK_ESCAPE)
 		{
 			DestroyWindow(hwnd);
 		}
 		return 0;
+
 	case WM_KEYUP:
-		if (wParam == VK_RIGHT)
-		{
-			right_arrow = false;
-		}
+		input.event = Key_Up;
+		input.key = Other;
+
+		if (wParam == 0x41)
+			input.key = Key_A;
+		else if (wParam == 0x44)
+			input.key = Key_D;
+		else if (wParam == 0x53)
+			input.key = Key_S;
+		else if (wParam == 0x57)
+			input.key = Key_W;
+		else if (wParam == VK_RIGHT)
+			input.key = Key_RARROW;
+		else if (wParam == VK_LEFT)
+			input.key = Key_LARROW;
+		else if (wParam == VK_UP)
+			input.key = Key_UARROW;
+		else if (wParam == VK_DOWN)
+			input.key = Key_DARROW;
+		
 		return 0;
 	}
 
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-/*void change_color(float r, float g, float b, float a)
-{
-	for (int i = 0; i < 4; ++i)
-	{
-		vertices[i].color[0] = r;
-		vertices[i].color[1] = g;
-		vertices[i].color[2] = b;
-		vertices[i].color[3] = a;
-	}
-
-	device_context->lpVtbl->UpdateSubresource(device_context, vertex_buffer, 0, NULL, vertices, 0, 0);
-}*/
-
-void update_simulation(float dt)
-{
-	if (right_arrow)
-	{
-		//float new_pos = old_pos + speed * dt;
-		//Modify sprite position
-		//glm_mat4_identity(model_transform);
-		//vec3 vector = { new_pos, 0, 0 };
-		//glm_translate(model_transform, vector);
-	}
-
 }

@@ -5,6 +5,7 @@
 #include <string.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "input.h"
 
 #define MAX_DRAWABLES 50
 
@@ -13,6 +14,8 @@ extern ID3D11Device* device;
 extern ID3D11DeviceContext* device_context;
 extern unsigned client_width;
 extern unsigned client_height;
+
+extern Input_Data input;
 
 typedef struct 
 {
@@ -375,6 +378,21 @@ void drawable2D_set_velocity(Drawable2D* drawable, vec3 velocity)
 
 void drawable2D_update(Drawable2D* drawable, double delta_time)
 {
+	if (is_key_down(&input) && input.key == Key_LARROW)
+	{
+		float velocity_vector[] = { -1.0f, 0.0f, 0.0f };
+		glm_vec3(velocity_vector, drawable->mov_data.velocity);
+	}
+	else if (is_key_down(&input) && input.key == Key_RARROW)
+	{
+		float velocity_vector[] = { 1.0f, 0.0f, 0.0f };
+		glm_vec3(velocity_vector, drawable->mov_data.velocity);
+	}
+	else
+	{
+		glm_vec3_zero(drawable->mov_data.velocity);
+	}
+
 	glm_vec3_muladds(drawable->mov_data.velocity, delta_time, drawable->transform.world_position);
 }
 
