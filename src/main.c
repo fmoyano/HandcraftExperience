@@ -8,6 +8,7 @@
 #include "graphics_system.h"
 #include "timing.h"
 #include "input.h"
+#include "text_rendering.h"
 
 extern IDXGISwapChain* swap_chain;
 extern ID3D11Device* device;
@@ -89,8 +90,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 
 	graphics_system_init(hwnd);
 	
+	Txt_Font* lucida_font = txt_create_font("data/fonts/lucon.ttf");
+
 	Drawable2D* velociraptor = drawable2D_create_from_texture("data/textures/velociraptor.png");
-	Drawable2D* t_rex = drawable2D_create_from_texture("data/textures/t-rex.png");
+	//Drawable2D* t_rex = drawable2D_create_from_texture("data/textures/t-rex.png");
 	//Drawable2D* square = drawable2D_create_from_shape(Square, Red);
 	
 	device_context->lpVtbl->IASetPrimitiveTopology(device_context, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -190,12 +193,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PWSTR pCmdLine,
 		device_context->lpVtbl->RSSetState(device_context, rasterizer_state);
 		device_context->lpVtbl->OMSetBlendState(device_context, blend_state, NULL, 0xffffffff);
 		
-		drawable2D_update(velociraptor, delta_time);
-		drawable2D_update(t_rex, delta_time);
+		//drawable2D_update(velociraptor, delta_time);
+		//drawable2D_update(t_rex, delta_time);
 		
 		drawable2D_draw(velociraptor);
-		drawable2D_draw(t_rex);
-		
+		//drawable2D_draw(t_rex);
+		txt_draw(lucida_font, 50, "holag");
+
 		swap_chain->lpVtbl->Present(swap_chain, 0, 0);
 
 		ending_time = get_OS_timer();

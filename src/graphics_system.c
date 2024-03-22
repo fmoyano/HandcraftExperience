@@ -9,11 +9,10 @@ ID3D11Device* device = NULL;
 ID3D11DeviceContext* device_context = NULL;
 
 extern ID3D11VertexShader* drawable_vertex_shader;
-//extern ID3DBlob* drawable_vertex_shader_blob;
 extern void* vertex_shader_data;
 extern int vertex_shader_size;
 
-extern ID3D11VertexShader* drawable_pixel_shader;
+extern ID3D11PixelShader* drawable_pixel_shader;
 
 void graphics_system_init(HWND window_handler)
 {

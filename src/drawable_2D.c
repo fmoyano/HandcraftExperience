@@ -6,6 +6,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "input.h"
+#include "text_rendering.h"
 
 #define MAX_DRAWABLES 50
 
@@ -81,16 +82,15 @@ static unsigned indices[] =
 };
 
 ID3D11VertexShader* drawable_vertex_shader;
-//ID3DBlob* drawable_vertex_shader_blob;
 void* vertex_shader_data;
 int vertex_shader_size;
-
-ID3D11VertexShader* drawable_pixel_shader;
+ID3D11PixelShader* drawable_pixel_shader;
 
 Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 {
-	int width, height, comp;
+	int width, height, pitch, comp;
 	unsigned char* image_data = stbi_load(texture_path, &width, &height, &comp, STBI_rgb_alpha);
+	//void* image_data = read_font_file(device, &width, &height, &pitch);
 
 	//Need to map the width and height of the image to clip space, taking into account that:
 	//2 horizontal units in clip space = client_width (width of the window in pixels)
@@ -101,10 +101,28 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 	float image_height_clip_space = image_pixel_height * 2.0f / client_height;
 
 	float start_y_position = 0.5f;
-	vertices[0].position[1] = start_y_position;
-	vertices[1].position[1] = start_y_position;
-	vertices[2].position[1] = start_y_position - image_height_clip_space;
-	vertices[3].position[1] = start_y_position - image_height_clip_space;
+	vertices[0].position[0] = -0.5f;
+	vertices[0].position[1] = 0.5f;
+	vertices[1].position[0] = -0.5f + 2 * (float)width / (float)client_width;
+	vertices[1].position[1] = 0.5f;
+	vertices[2].position[0] = -0.5f;
+	vertices[2].position[1] = 0.5f - 2 * (float)height / (float)client_height;
+	vertices[3].position[0] = -0.5f + 2 * (float)width / (float)client_width;
+	vertices[3].position[1] = 0.5f - 2 * (float)height / (float)client_height;
+
+	/*vertices[0].position[0] = -1;
+	vertices[0].position[1] = 1;
+	vertices[1].position[0] = 1;
+	vertices[1].position[1] = 1;
+	vertices[2].position[0] = -1;
+	vertices[2].position[1] = -1;
+	vertices[3].position[0] = 1;
+	vertices[3].position[1] = -1;*/
+
+	/*vertices[0].position[1] = start_y_position + 0.5f * image_height_clip_space;
+	vertices[1].position[1] = start_y_position + 0.5f * image_height_clip_space;
+	vertices[2].position[1] = start_y_position - 0.5f * image_height_clip_space;
+	vertices[3].position[1] = start_y_position - 0.5f * image_height_clip_space;*/
 
 	Drawable2D drawable;
 	memset(&drawable, 0, sizeof(Drawable2D));
@@ -121,7 +139,6 @@ Drawable2D* drawable2D_create_from_texture(const char* texture_path)
 	float scale_vector[] = {1.0f, 1.0f, 0.0f};
 	glm_vec3(scale_vector, transform.scale);
 	drawable.transform = transform;
-	//rawable.mov_data
 
 	graphics_system_create_buffer(vertices, Vertex_Buffer, sizeof(vertices),
 		&drawable.vertex_buffer);
